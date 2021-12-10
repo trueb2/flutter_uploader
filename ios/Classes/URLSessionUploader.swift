@@ -118,7 +118,7 @@ class URLSessionUploader: NSObject {
     private override init() {
         super.init()
 
-        delegates.append(EngineManager())
+        // delegates.append(EngineManager())
 
         self.queue.name = "chillisource.flutter_uploader.queue"
 
