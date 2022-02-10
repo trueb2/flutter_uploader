@@ -262,7 +262,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler {
     return new OneTimeWorkRequest.Builder(UploadWorker.class)
         .setConstraints(constraints)
         .addTag(FLUTTER_UPLOAD_WORK_TAG)
-        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 5, TimeUnit.SECONDS)
+        .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
         .setInputData(dataBuilder.build())
         .build();
   }
