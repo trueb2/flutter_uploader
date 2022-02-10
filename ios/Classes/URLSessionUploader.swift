@@ -118,9 +118,7 @@ class URLSessionUploader: NSObject {
     private override init() {
         super.init()
 
-        delegates.append(EngineManager())
-
-        delegates.append(UploadResultDatabase.shared)
+        // delegates.append(EngineManager())
 
         self.queue.name = "chillisource.flutter_uploader.queue"
 
@@ -150,12 +148,14 @@ class URLSessionUploader: NSObject {
         wifiConfiguration.httpMaximumConnectionsPerHost = maxConcurrentTasks.intValue
         wifiConfiguration.timeoutIntervalForRequest = URLSessionUploader.determineTimeout()
         wifiConfiguration.allowsCellularAccess = false
+        wifiConfiguration.httpShouldUsePipelining = true
         self.wifiSession = URLSession(configuration: wifiConfiguration, delegate: self, delegateQueue: queue)
 
         // configure regular session
         let sessionConfiguration = URLSessionConfiguration.background(withIdentifier: Keys.backgroundSessionIdentifier)
         sessionConfiguration.httpMaximumConnectionsPerHost = maxConcurrentTasks.intValue
         sessionConfiguration.timeoutIntervalForRequest = URLSessionUploader.determineTimeout()
+        sessionConfiguration.httpShouldUsePipelining = true
         self.session = URLSession(configuration: sessionConfiguration, delegate: self, delegateQueue: queue)
     }
 

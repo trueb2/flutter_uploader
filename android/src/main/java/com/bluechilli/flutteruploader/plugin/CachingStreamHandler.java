@@ -24,20 +24,22 @@ public class CachingStreamHandler<T> implements StreamHandler {
       for (T item : cache.values()) {
         events.success(item);
       }
+      cache.clear();
     }
   }
 
   @Override
   public void onCancel(Object arguments) {
     eventSink = null;
+    cache.clear();
   }
 
   public void add(String id, T args) {
     if (eventSink != null) {
       eventSink.success(args);
+    } else {
+      cache.put(id, args);
     }
-
-    cache.put(id, args);
   }
 
   public void clear() {
