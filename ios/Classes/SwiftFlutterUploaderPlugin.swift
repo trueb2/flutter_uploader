@@ -1,6 +1,6 @@
+import Alamofire
 import Flutter
 import UIKit
-import Alamofire
 
 private let validHttpMethods = ["POST", "PUT", "PATCH"]
 
@@ -36,18 +36,18 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
         registrar.addApplicationDelegate(instance)
     }
 
-    init (_ channel: FlutterMethodChannel, progressEventChannel: FlutterEventChannel, resultEventChannel: FlutterEventChannel) {
+    init(_ channel: FlutterMethodChannel, progressEventChannel: FlutterEventChannel, resultEventChannel: FlutterEventChannel) {
         self.channel = channel
 
         self.progressEventChannel = progressEventChannel
-        self.progressHandler = CachingStreamHandler()
+        progressHandler = CachingStreamHandler()
         progressEventChannel.setStreamHandler(progressHandler)
 
         self.resultEventChannel = resultEventChannel
-        self.resultHandler = CachingStreamHandler()
+        resultHandler = CachingStreamHandler()
         resultEventChannel.setStreamHandler(resultHandler)
 
-        self.taskQueue = DispatchQueue(label: "chillisource.flutter_uploader.dispatch.queue")
+        taskQueue = DispatchQueue(label: "chillisource.flutter_uploader.dispatch.queue", qos: .utility)
         super.init()
 
         urlSessionUploader.addDelegate(self)
@@ -87,8 +87,8 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
         guard let args = call.arguments as? [String: Any?],
               let urlString = args["url"] as? String,
               let method = args["method"] as? String,
-              let files = args["files"] as? [Any] else {
-
+              let files = args["files"] as? [Any]
+        else {
             result(FlutterError(code: "invalid_parameters", message: "Invalid parameters passed", details: nil))
             return
         }
@@ -127,19 +127,21 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
             parameters: data,
             tag: tag,
             allowCellular: allowCellular,
-            completion: { (task, error) in
+            completion: { task, error in
                 if error != nil {
                     result(error!)
                 } else if let uploadTask = task {
                     result(self.urlSessionUploader.identifierForTask(uploadTask))
                 }
-            })
+            }
+        )
     }
 
     private func enqueueBinaryMethodCall(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         guard let args = call.arguments as? [String: Any?],
-            let urlString = args["url"] as? String,
-            let method = args["method"] as? String else {
+              let urlString = args["url"] as? String,
+              let method = args["method"] as? String
+        else {
             result(FlutterError(code: "invalid_parameters", message: "Invalid parameters passed", details: nil))
             return
         }
@@ -176,7 +178,7 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        binaryUploadTaskWithURLWithCompletion(url: url, file: fileUrl, method: method, headers: headers, tag: tag, allowCellular: allowCellular, completion: { (task, error) in
+        binaryUploadTaskWithURLWithCompletion(url: url, file: fileUrl, method: method, headers: headers, tag: tag, allowCellular: allowCellular, completion: { task, error in
             if error != nil {
                 result(error!)
             } else if let uploadTask = task {
@@ -187,14 +189,15 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
 
     private func cancelMethodCall(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
         if let args = call.arguments as? [String: Any?],
-           let taskId = args[Key.taskId] as? String {
+           let taskId = args[Key.taskId] as? String
+        {
             urlSessionUploader.cancelWithTaskId(taskId)
         }
 
         result(nil)
     }
 
-    private func cancelAllMethodCall(_ call: FlutterMethodCall, _ result: @escaping FlutterResult) {
+    private func cancelAllMethodCall(_: FlutterMethodCall, _ result: @escaping FlutterResult) {
         urlSessionUploader.cancelAllTasks()
 
         result(nil)
@@ -204,20 +207,21 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
                                                        file: URL,
                                                        method: String,
                                                        headers: [String: Any?]?,
-                                                       tag: String?,
+                                                       tag _: String?,
                                                        allowCellular: Bool,
-                                                       completion completionHandler:@escaping (URLSessionUploadTask?, FlutterError?) -> Void) {
+                                                       completion completionHandler: @escaping (URLSessionUploadTask?, FlutterError?) -> Void)
+    {
         let request = NSMutableURLRequest(url: url)
         request.httpMethod = method
         request.setValue("*/*", forHTTPHeaderField: "Accept")
 
-        headers?.forEach { (key, value) in
+        headers?.forEach { key, value in
             if let value = value as? String {
                 request.setValue(value, forHTTPHeaderField: key)
             }
         }
 
-        completionHandler(self.urlSessionUploader.enqueueUploadTask(request as URLRequest, path: file.path, wifiOnly: !allowCellular), nil)
+        completionHandler(urlSessionUploader.enqueueUploadTask(request as URLRequest, path: file.path, wifiOnly: !allowCellular), nil)
     }
 
     private func uploadTaskWithURLWithCompletion(
@@ -226,27 +230,29 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
         method: String,
         headers: [String: Any?]?,
         parameters data: [String: Any?]?,
-        tag: String?,
+        tag _: String?,
         allowCellular: Bool,
-        completion completionHandler:@escaping (URLSessionUploadTask?, FlutterError?) -> Void) {
+        completion completionHandler: @escaping (URLSessionUploadTask?, FlutterError?) -> Void
+    ) {
         var flutterError: FlutterError?
         let fileManager = FileManager.default
-        var fileCount: Int = 0
+        var fileCount = 0
         let formData = MultipartFormData()
         let tempDirectory = NSURL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
 
         if data != nil {
-            data?.forEach({ (key, value) in
+            data?.forEach { key, value in
                 if let value = value as? String {
                     formData.append(value.data(using: .utf8)!, withName: key)
                 }
-            })
+            }
         }
 
         for file in files {
             guard let file = file as? [String: Any],
                   let fieldname = file[Key.fieldname] as? String,
-                  let path = file[Key.path] as? String else {
+                  let path = file[Key.path] as? String
+            else {
                 continue
             }
 
@@ -294,7 +300,7 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        self.makeRequest(path, url, method, headers, formData.contentType, formData.contentLength, allowCellular: allowCellular, completion: { (task, error) in
+        makeRequest(path, url, method, headers, formData.contentType, formData.contentLength, allowCellular: allowCellular, completion: { task, error in
             completionHandler(task, error)
         })
     }
@@ -307,7 +313,8 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
         _ contentType: String,
         _ contentLength: UInt64,
         allowCellular: Bool,
-        completion completionHandler: (URLSessionUploadTask?, FlutterError?) -> Void) {
+        completion completionHandler: (URLSessionUploadTask?, FlutterError?) -> Void
+    ) {
         let request = NSMutableURLRequest(url: url)
         request.httpMethod = method
         request.setValue("*/*", forHTTPHeaderField: "Accept")
@@ -315,7 +322,7 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
         request.setValue("\(contentLength)", forHTTPHeaderField: "Content-Length")
 
         if let headers = headers {
-            headers.forEach { (key, value) in
+            headers.forEach { key, value in
                 if let value = value as? String {
                     request.setValue(value, forHTTPHeaderField: key)
                 }
@@ -334,8 +341,8 @@ public class SwiftFlutterUploaderPlugin: NSObject, FlutterPlugin {
 }
 
 /// UIApplicationDelegate
-extension SwiftFlutterUploaderPlugin {
-    public func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) -> Bool {
+public extension SwiftFlutterUploaderPlugin {
+    func application(_: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) -> Bool {
         NSLog("ApplicationHandleEventsForBackgroundURLSession: \(identifier)")
         if identifier == Keys.backgroundSessionIdentifier {
             urlSessionUploader.backgroundTransferCompletionHander = completionHandler
@@ -344,7 +351,7 @@ extension SwiftFlutterUploaderPlugin {
         return true
     }
 
-    public func applicationWillTerminate(_ application: UIApplication) {
+    func applicationWillTerminate(_: UIApplication) {
 //        runningTaskById.removeAll()
 //        uploadedData.removeAll()
 //        queue.cancelAllOperations()
@@ -355,7 +362,7 @@ extension SwiftFlutterUploaderPlugin: UploaderDelegate {
     func uploadEnqueued(taskId: String) {
         resultHandler.add(taskId, [
             Key.taskId: taskId,
-            Key.status: UploadTaskStatus.enqueue.rawValue
+            Key.status: UploadTaskStatus.enqueue.rawValue,
         ])
     }
 
@@ -363,7 +370,7 @@ extension SwiftFlutterUploaderPlugin: UploaderDelegate {
         progressHandler.add(taskId, [
             Key.taskId: taskId,
             Key.status: inStatus.rawValue,
-            Key.progress: progress
+            Key.progress: progress,
         ])
     }
 
@@ -373,9 +380,8 @@ extension SwiftFlutterUploaderPlugin: UploaderDelegate {
             Key.status: UploadTaskStatus.completed.rawValue,
             Key.message: message ?? NSNull(),
             Key.statusCode: statusCode,
-            Key.headers: headers
+            Key.headers: headers,
         ])
-
     }
 
     func uploadFailed(taskId: String, inStatus: UploadTaskStatus, statusCode: Int, errorCode: String, errorMessage: String?, errorStackTrace: [String]) {
@@ -385,8 +391,7 @@ extension SwiftFlutterUploaderPlugin: UploaderDelegate {
             Key.statusCode: statusCode,
             Key.code: errorCode,
             Key.message: errorMessage ?? NSNull(),
-            Key.details: errorStackTrace
+            Key.details: errorStackTrace,
         ])
     }
-
 }
