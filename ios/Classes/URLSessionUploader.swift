@@ -52,25 +52,30 @@ class URLSessionUploader: NSObject {
         }
 
         let activeSession = wifiOnly ? wifiSession : session
-        let uploadTask = activeSession.uploadTask(
-                with: request as URLRequest,
-                fromFile: URL(fileURLWithPath: path)
-        )
+        do {
+            let uploadTask = try activeSession.uploadTask(
+                    with: request as URLRequest,
+                    fromFile: URL(fileURLWithPath: path)
+            )
 
-        // Create a random UUID as task description (& ID).
-        uploadTask.taskDescription = UUID().uuidString
+            // Create a random UUID as task description (& ID).
+            uploadTask.taskDescription = UUID().uuidString
 
-        let taskId = identifierForTask(uploadTask)
+            let taskId = identifierForTask(uploadTask)
 
-        delegates.uploadEnqueued(taskId: taskId)
+            delegates.uploadEnqueued(taskId: taskId)
 
-        uploadTask.resume()
+            uploadTask.resume()
 
-        semaphore.wait()
-        self.runningTaskById[taskId] = UploadTask(taskId: taskId, status: .enqueue, progress: 0)
-        semaphore.signal()
+            semaphore.wait()
+            self.runningTaskById[taskId] = UploadTask(taskId: taskId, status: .enqueue, progress: 0)
+            semaphore.signal()
 
-        return uploadTask
+            return uploadTask
+        } catch {
+            NSLog("Caught uploadTask exception \(error)")
+            return nil
+        }
     }
 
     ///
@@ -148,14 +153,14 @@ class URLSessionUploader: NSObject {
         wifiConfiguration.httpMaximumConnectionsPerHost = maxConcurrentTasks.intValue
         wifiConfiguration.timeoutIntervalForRequest = URLSessionUploader.determineTimeout()
         wifiConfiguration.allowsCellularAccess = false
-        wifiConfiguration.httpShouldUsePipelining = true
+        wifiConfiguration.httpShouldUsePipelining = false
         self.wifiSession = URLSession(configuration: wifiConfiguration, delegate: self, delegateQueue: queue)
 
         // configure regular session
         let sessionConfiguration = URLSessionConfiguration.background(withIdentifier: Keys.backgroundSessionIdentifier)
         sessionConfiguration.httpMaximumConnectionsPerHost = maxConcurrentTasks.intValue
         sessionConfiguration.timeoutIntervalForRequest = URLSessionUploader.determineTimeout()
-        sessionConfiguration.httpShouldUsePipelining = true
+        sessionConfiguration.httpShouldUsePipelining = false
         self.session = URLSession(configuration: sessionConfiguration, delegate: self, delegateQueue: queue)
     }
 
